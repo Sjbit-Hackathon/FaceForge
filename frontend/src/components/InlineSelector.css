@@ -1,0 +1,204 @@
+.inline-selector-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #0f172a; /* Slate 900 */
+  border: 1px solid #1e293b; /* Slate 800 */
+  border-radius: 8px;
+  margin-bottom: 0px;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.inline-selector-container.open {
+  border-color: #334155; /* Slate 700 */
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #e2e8f0; /* Slate 200 */
+  border-radius: 8px;
+  width: 100%;
+  transition: background-color 0.2s ease, border-radius 0.2s ease;
+}
+
+.inline-selector-container.open .selector-header {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.selector-header:hover {
+  background-color: #1e293b; /* Slate 800 */
+}
+
+.selector-header:focus-visible {
+  outline: 2px solid #3b82f6; /* Blue 500 */
+  outline-offset: -2px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lock-icon {
+  color: #94a3b8; /* Slate 400 */
+}
+
+.lock-icon.locked {
+  color: #e2e8f0; /* Slate 200 */
+}
+
+.group-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  background-color: #334155; /* Slate 700 */
+  transition: background-color 0.2s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch.on {
+  background-color: #3b82f6; /* Blue 500 */
+}
+
+.toggle-switch:focus-visible {
+  outline: 2px solid #60a5fa; /* Blue 400 */
+  outline-offset: 2px;
+}
+
+.toggle-thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform: translateX(2px);
+}
+
+.toggle-switch.on .toggle-thumb {
+  transform: translateX(18px);
+}
+
+/* Dropdown Content */
+.selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  padding: 0 16px 16px 16px;
+  border: 1px solid #334155; /* Slate 700 */
+  border-top: none;
+  background-color: #0f172a; /* Slate 900 */
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  min-width: 100%;
+  width: max-content;
+  max-width: 90vw; /* Prevent it from being larger than viewport */
+}
+
+.attributes-row {
+  display: flex;
+  flex-wrap: wrap; /* allow wrap if too long */
+  gap: 16px;
+  padding-top: 16px;
+}
+
+/* Custom Scrollbar for the row */
+.attributes-row::-webkit-scrollbar {
+  height: 6px;
+}
+.attributes-row::-webkit-scrollbar-track {
+  background: #0f172a; 
+}
+.attributes-row::-webkit-scrollbar-thumb {
+  background: #334155; 
+  border-radius: 3px;
+}
+.attributes-row::-webkit-scrollbar-thumb:hover {
+  background: #475569; 
+}
+
+.attribute-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.attribute-label {
+  font-size: 13px;
+  color: #94a3b8; /* Slate 400 */
+  font-weight: 500;
+}
+
+.options-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  background-color: #1e293b; /* Slate 800 */
+  color: #cbd5e1; /* Slate 300 */
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background-color: #334155; /* Slate 700 */
+  color: #f8fafc; /* Slate 50 */
+}
+
+.chip:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.chip.active {
+  background-color: rgba(59, 130, 246, 0.15); /* Blue tinted background */
+  color: #60a5fa; /* Blue 400 */
+  border-color: rgba(59, 130, 246, 0.5); /* Blue tinted border */
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background-color: #334155; /* Slate 700 */
+  margin-left: 8px;
+}
+
+.attribute-group:last-child .divider {
+  display: none;
+}

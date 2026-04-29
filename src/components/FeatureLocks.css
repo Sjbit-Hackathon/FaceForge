@@ -1,0 +1,51 @@
+.feature-locks-panel {
+  background-color: #0f172a; /* Same as the container in screenshot or darker */
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.panel-header {
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  color: #94a3b8; /* Slate 400 */
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.selectors-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.selector-wrapper {
+  position: relative;
+}
+
+.panel-footer-text {
+  color: #94a3b8; /* Slate 400 */
+  font-size: 13px;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .selectors-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .selectors-grid {
+    grid-template-columns: 1fr;
+  }
+}
