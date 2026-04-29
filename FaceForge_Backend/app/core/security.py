@@ -8,16 +8,12 @@ from jwt import InvalidTokenError
 from app.core.config import settings
 
 
-def create_access_token(subject: str, claims: Dict[str, Any] | None = None) -> str:
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
     now = datetime.now(timezone.utc)
-    payload = {
-        "sub": subject,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=settings.access_token_expire_minutes)).timestamp()),
-    }
-    if claims:
-        payload.update(claims)
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    expire = now + timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode.update({"exp": int(expire.timestamp()), "iat": int(now.timestamp())})
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def decode_access_token(token: str) -> Dict[str, Any]:

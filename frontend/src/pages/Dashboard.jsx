@@ -60,9 +60,14 @@ const Dashboard = () => {
       if (res.ok) {
         const data = await res.json();
         navigate(`/session/${data.id}`);
+      } else {
+        const errData = await res.json();
+        alert(`Failed to create case: ${errData.detail || 'Unknown error'}`);
+        setIsCreating(false);
       }
     } catch (err) {
       console.error(err);
+      alert(`Network error: ${err.message}`);
       setIsCreating(false);
     }
   };

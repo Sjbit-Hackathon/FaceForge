@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PenTool, ChevronDown, CheckCircle2, FileText, History, Search, ShieldCheck, Plus, Loader2 } from 'lucide-react';
+import { PenTool, ChevronDown, Loader2, Download } from 'lucide-react';
+import SpeechInput from '../components/SpeechInput';
 import './Session.css';
 
 const API_BASE = 'http://127.0.0.1:8000';
@@ -86,81 +87,55 @@ const Session = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  const [sessionData, setSessionData] = useState(null);
-  const [versions, setVersions] = useState([]);
-  const [currentVersion, setCurrentVersion] = useState(null);
-
+  // States
   const [hasSketch, setHasSketch] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isIterating, setIsIterating] = useState(false);
   const [witnessInput, setWitnessInput] = useState('');
   const [refinementInput, setRefinementInput] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [activeTab, setActiveTab] = useState('Versions');
+  const [currentVersion, setCurrentVersion] = useState(null);
+  const [apiError, setApiError] = useState('');
   
   const [featureSelections, setFeatureSelections] = useState({
-    Eyes: { Size: 'Medium', Shape: 'Almond', Spacing: 'Normal', Depth: 'Normal' }, 
-    Nose: {}, Mouth: {}, Jaw: {}
+    Eyes: {}, Nose: {}, Mouth: {}, Jaw: {}
   });
 
-  const getStorageUrl = (path) => path ? `${API_BASE.replace('/api/v1', '')}/storage/v1/object/public/faceforge-images/${path}` : null;
-
-  useEffect(() => {
-    fetchSession();
-  }, [id]);
-
-  const fetchSession = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/sessions/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSessionData(data);
-        if (data.versions && data.versions.length > 0) {
-          setVersions(data.versions);
-          setCurrentVersion(data.versions[0]);
-          setHasSketch(true);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const handleSelectFeature = (group, attrName, value) => {
+    setFeatureSelections(prev => ({
+      ...prev, [group]: { ...prev[group], [attrName]: value }
+    }));
   };
 
   const handleGenerate = async () => {
     if (!witnessInput) return;
     setIsGenerating(true);
+    setApiError('');
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/generate`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           session_id: id,
-          witness_description: witnessInput
+          witness_description: witnessInput,
+          negative_prompt: "blurry, distorted, unrealistic"
         })
       });
-      
       if (res.ok) {
         const data = await res.json();
-        const newVersion = {
-          id: data.version_id,
-          version_label: data.version_label || `v${versions.length + 1}`,
-          image_url: data.image_url || data.image_path,
-          prompt: witnessInput,
-          hash: data.hash
-        };
-        setVersions([newVersion, ...versions]);
-        setCurrentVersion(newVersion);
         setHasSketch(true);
+        setCurrentVersion(data);
+      } else {
+        const errorData = await res.json();
+        setApiError(errorData.detail || "Failed to generate face. Please check your API keys.");
       }
     } catch (err) {
       console.error(err);
+      setApiError("Network error. Is the backend running?");
     } finally {
       setIsGenerating(false);
     }
@@ -169,198 +144,127 @@ const Session = () => {
   const handleRefine = async () => {
     if (!refinementInput || !currentVersion) return;
     setIsIterating(true);
+    setApiError('');
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/refine`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           session_id: id,
-          version_id: currentVersion.id,
-          refinement_prompt: refinementInput
+          parent_version_id: currentVersion.version_id,
+          prompt: refinementInput,
+          negative_prompt: "blurry, distorted"
         })
       });
-      
       if (res.ok) {
-        const data = await res.json();
-        const newVersion = {
-          id: data.version_id,
-          version_label: data.version_label || `v${versions.length + 1}`,
-          image_url: data.image_url || data.image_path,
-          prompt: refinementInput,
-          hash: data.hash
-        };
-        setVersions([newVersion, ...versions]);
+        const newVersion = await res.json();
         setCurrentVersion(newVersion);
         setRefinementInput('');
+      } else {
+        const errorData = await res.json();
+        setApiError(errorData.detail || "Failed to refine face. Please check your API keys.");
       }
     } catch (err) {
       console.error(err);
+      setApiError("Network error. Is the backend running?");
     } finally {
       setIsIterating(false);
     }
   };
 
-  const handleSelectFeature = (group, attrName, value) => {
-    setFeatureSelections(prev => ({
-      ...prev, [group]: { ...prev[group], [attrName]: value }
-    }));
-  };
-
   return (
-    <div className="unified-session-layout">
+    <div className="unified-session-layout second-picture-layout">
       
-      {/* LEFT COLUMN (60%) */}
+      {/* LEFT COLUMN (65%) */}
       <div className="column-left">
-        
-        {/* Witness Statement Card */}
-        <div className="card witness-card">
-          <div className="card-header border-none">
+        <div className="card sketch-card transparent-card">
+          <div className="card-header border-none align-center">
             <div className="header-meta">
-              <FileText size={18} className="text-accent" />
-              <h3>Witness Statement • {sessionData?.case_number || 'Loading...'}</h3>
+              <h3 style={{ fontSize: '20px', fontWeight: '600' }}>HD Suspect Visualizer</h3>
+              <span className="case-badge">CASE-2026-001</span>
+              <span className="status-dot"></span>
             </div>
-          </div>
-          <div className="card-body pt-0">
-            <p className="card-subtext">Capture the officer's interview verbatim. The system extracts age, features, hair, distinguishing marks, then generates an HD composite.</p>
-            <textarea 
-              className="ui-textarea"
-              placeholder="e.g. Male, late 30s, light olive skin, short dark brown hair receding at the temples, brown almond-shaped eyes, prominent straight nose, square jaw with light stubble, scar above the left eyebrow, neutral expression..."
-              value={witnessInput}
-              onChange={(e) => setWitnessInput(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Sketch Canvas Card */}
-        <div className="card sketch-card">
-          <div className="card-header canvas-header border-none">
-            <div className="header-meta-col">
-              <h3>Sketch Canvas</h3>
-              {currentVersion && (
-                <span className="meta-badge-text mono">Iteration {currentVersion.version_label} &nbsp; sha256: {currentVersion.hash?.substring(0, 16)}...</span>
-              )}
-            </div>
-            <button className="btn-success btn-sm" onClick={() => navigate(`/session/${id}/export`)}>Export Report</button>
+            <button className="btn-success btn-sm flex-gap">
+              <Download size={14} /> Generate Forensic Report
+            </button>
           </div>
           
           <div className="card-body canvas-body pt-0">
-            <div className="canvas-viewport">
+            <div className="canvas-viewport dark-viewport">
               {hasSketch && currentVersion ? (
                 <div className="sketch-image-container">
-                  <div className="hd-sketch-mock">
-                    <img 
-                      src={currentVersion.image_url && currentVersion.image_url.startsWith('http') ? currentVersion.image_url : getStorageUrl(currentVersion.image_url)} 
-                      alt="Composite Sketch" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="sketch-face-placeholder"></div>'; }} 
-                    />
-                  </div>
+                  <img src={currentVersion.image_url} alt="Composite Sketch" className="sketch-render" />
                 </div>
               ) : (
-                <div className="wireframe-placeholder">AWAITING DESCRIPTION</div>
+                <div className="wireframe-placeholder">SVG WIREFRAME PLACEHOLDER</div>
               )}
-              
-              <FeatureControls 
-                activeDropdown={activeDropdown}
-                setActiveDropdown={setActiveDropdown}
-                selections={featureSelections}
-                onSelect={handleSelectFeature}
-              />
             </div>
+            
+            <FeatureControls 
+              activeDropdown={activeDropdown}
+              setActiveDropdown={setActiveDropdown}
+              selections={featureSelections}
+              onSelect={handleSelectFeature}
+            />
           </div>
         </div>
       </div>
 
-      {/* RIGHT COLUMN (40%) */}
-      <div className="column-right">
+      {/* RIGHT COLUMN (35%) */}
+      <div className="column-right right-panel-spacing">
         
         {/* AI Interrogator Card */}
-        <div className="card">
+        <div className="card interrogator-card">
           <div className="card-header border-none pb-2">
-            <div className="header-meta">
-              <h3>AI Interrogator</h3>
-              <span className="gemini-badge">Gemini 2.0 Flash</span>
-            </div>
+            <h3>AI Interrogator</h3>
+            <span className="gemini-badge">Gemini 2.0 Flash</span>
           </div>
           <div className="card-body pt-0">
-            <p className="card-subtext">Provide a witness statement to generate the initial sketch.</p>
+            <label className="input-label">Witness Description</label>
+            <div className="prompt-container relative mt-2">
+              <textarea 
+                className="ui-textarea tall-textarea"
+                placeholder="Describe the suspect in detail (e.g. Male, late 30s, short dark brown hair...)"
+                value={witnessInput}
+                onChange={(e) => setWitnessInput(e.target.value)}
+              />
+              <div className="speech-input-wrapper">
+                <SpeechInput onTranscript={(text) => setWitnessInput(prev => prev + (prev ? " " : "") + text)} />
+              </div>
+            </div>
+            
             <button 
-              className="btn-primary full-width mt-2"
+              className="btn-primary full-width mt-4" 
               onClick={handleGenerate}
               disabled={isGenerating || !witnessInput}
             >
-              {isGenerating ? <Loader2 size={16} className="spinner" /> : <><PenTool size={16} /> Generate Initial Sketch</>}
+              {isGenerating ? <Loader2 size={16} className="spinner" /> : <><PenTool size={16} /> Generate HD Sketch</>}
             </button>
+            
+            {apiError && (
+              <div className="accuracy-alert mt-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
+                <strong>Error:</strong> {apiError}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Iterative Refinement Card */}
-        <div className="card">
+        {/* Refine Sketch Card */}
+        <div className="card refine-card">
           <div className="card-header border-none pb-2">
-            <h3>Iterative refinement</h3>
+            <h3>Refine Sketch</h3>
           </div>
           <div className="card-body pt-0">
-            <p className="card-subtext">Add a small correction; locked features remain fixed across iterations.</p>
             <textarea 
               className="ui-textarea sm mt-2"
-              placeholder="e.g. Make the nose narrower with a slight bump on the bridge"
+              placeholder="Add a small correction (e.g. Make the nose narrower with a slight bump)"
               value={refinementInput}
               onChange={(e) => setRefinementInput(e.target.value)}
             />
-            <button 
-              className="btn-secondary full-width mt-4" 
-              onClick={handleRefine}
-              disabled={isIterating || !hasSketch || !refinementInput}
-            >
-              {isIterating ? <Loader2 size={16} className="spinner" /> : <><PenTool size={16} /> Refine sketch</>}
-            </button>
-          </div>
-        </div>
-
-        {/* Version Panel Card */}
-        <div className="card versions-card">
-          <div className="card-header tabs-header">
-            <button className={`tab-btn ${activeTab === 'Versions' ? 'active' : ''}`} onClick={() => setActiveTab('Versions')}>
-              <History size={16}/> Versions
-            </button>
-            <button className={`tab-btn ${activeTab === 'Matches' ? 'active' : ''}`} onClick={() => setActiveTab('Matches')}>
-              <Search size={16}/> Matches
-            </button>
-            <button className={`tab-btn ${activeTab === 'Audit' ? 'active' : ''}`} onClick={() => setActiveTab('Audit')}>
-              <ShieldCheck size={16}/> Audit
-            </button>
-          </div>
-          
-          <div className="card-body bg-darker">
-            {activeTab === 'Versions' && (
-              <div className="thumbnail-grid">
-                {versions.map((ver, idx) => (
-                  <div 
-                    key={ver.id} 
-                    className={`thumb-item ${currentVersion?.id === ver.id ? 'active' : ''}`}
-                    onClick={() => setCurrentVersion(ver)}
-                  >
-                    <span className="thumb-label">{ver.version_label || `v${versions.length - idx}`}</span>
-                    <div className="thumb-img">
-                      <img 
-                        src={ver.image_url && ver.image_url.startsWith('http') ? ver.image_url : getStorageUrl(ver.image_url)} 
-                        alt="v-thumbnail"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="thumb-item new-iteration">
-                  <Plus size={24} className="text-muted"/>
-                  <span>New iteration</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

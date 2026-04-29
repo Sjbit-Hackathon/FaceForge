@@ -24,7 +24,7 @@ def register(payload: RegisterRequest) -> TokenResponse:
         }
     )
     supabase_service.log_audit(user["id"], "auth.register", "user", user["id"], {"email": user["email"]})
-    token = create_access_token(user["id"], {"role": user.get("role"), "email": user["email"]})
+    token = create_access_token(data={"sub": str(user["id"]), "role": user.get("role"), "email": user["email"]})
     safe_user = {key: value for key, value in user.items() if key != "password_hash"}
     return TokenResponse(access_token=token, user=safe_user)
 
@@ -35,6 +35,6 @@ def login(payload: LoginRequest) -> TokenResponse:
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     supabase_service.log_audit(user["id"], "auth.login", "user", user["id"], {"email": user["email"]})
-    token = create_access_token(user["id"], {"role": user.get("role"), "email": user["email"]})
+    token = create_access_token(data={"sub": str(user["id"]), "role": user.get("role"), "email": user["email"]})
     safe_user = {key: value for key, value in user.items() if key != "password_hash"}
     return TokenResponse(access_token=token, user=safe_user)
