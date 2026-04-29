@@ -1,21 +1,69 @@
-import React, { useState } from 'react';
-import { Folder, Activity, FileCheck, Plus, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Folder, Activity, FileCheck, Plus, X, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Dashboard.css';
+
+const API_BASE = 'http://127.0.0.1:8000';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCaseNumber, setNewCaseNumber] = useState('');
-  const [sessions, setSessions] = useState([
-    { id: 'CASE-2026-001', date: '2026-04-29', iterations: 3, status: 'Active' },
-    { id: 'CASE-2026-002', date: '2026-04-28', iterations: 12, status: 'Exported' }
-  ]);
+  const [newCaseTitle, setNewCaseTitle] = useState('');
+  const [sessions, setSessions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreateSession = (e) => {
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessions(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateSession = async (e) => {
     e.preventDefault();
-    if (newCaseNumber) {
-      navigate(`/session/${newCaseNumber}`);
+    if (!newCaseNumber || !newCaseTitle) return;
+    setIsCreating(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/sessions/create`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          case_number: newCaseNumber,
+          title: newCaseTitle,
+          notes: ''
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        navigate(`/session/${data.id}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsCreating(false);
     }
   };
 
@@ -40,14 +88,14 @@ const Dashboard = () => {
           <FileCheck size={20} className="stat-icon text-success" />
           <div className="stat-content">
             <div className="stat-label">Exported Cases</div>
-            <div className="stat-value">{sessions.filter(s => s.status === 'Exported').length}</div>
+            <div className="stat-value">{sessions.filter(s => s.status === 'Exported' || s.status === 'closed').length}</div>
           </div>
         </div>
         <div className="stat-card">
           <Activity size={20} className="stat-icon text-primary" />
           <div className="stat-content">
             <div className="stat-label">Active Sessions</div>
-            <div className="stat-value">{sessions.filter(s => s.status === 'Active').length}</div>
+            <div className="stat-value">{sessions.filter(s => s.status === 'active').length}</div>
           </div>
         </div>
       </div>
@@ -55,7 +103,11 @@ const Dashboard = () => {
       <div className="sessions-panel">
         <h2 className="panel-title">Recent Sessions</h2>
         
-        {sessions.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-state">
+            <Loader2 className="spinner" size={24} />
+          </div>
+        ) : sessions.length === 0 ? (
           <div className="empty-state">
             <p>No sessions yet — start your first case</p>
           </div>
@@ -64,8 +116,9 @@ const Dashboard = () => {
             <thead>
               <tr>
                 <th>Case #</th>
+                <th>Title</th>
                 <th>Date</th>
-                <th>Iterations</th>
+                <th>Versions</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -73,9 +126,10 @@ const Dashboard = () => {
             <tbody>
               {sessions.map(s => (
                 <tr key={s.id}>
-                  <td className="mono">{s.id}</td>
-                  <td className="mono">{s.date}</td>
-                  <td>{s.iterations}</td>
+                  <td className="mono">{s.case_number}</td>
+                  <td>{s.title}</td>
+                  <td className="mono">{new Date(s.created_at).toLocaleDateString()}</td>
+                  <td>{s.versions ? s.versions.length : 0}</td>
                   <td>
                     <span className={`status-badge ${s.status.toLowerCase()}`}>
                       {s.status}
@@ -83,7 +137,7 @@ const Dashboard = () => {
                   </td>
                   <td>
                     <Link to={`/session/${s.id}`} className="btn-secondary action-btn">
-                      {s.status === 'Active' ? 'Continue' : 'View'}
+                      {s.status === 'active' ? 'Continue' : 'View'}
                     </Link>
                   </td>
                 </tr>
@@ -112,9 +166,22 @@ const Dashboard = () => {
                   required
                 />
               </div>
+              <div className="form-group">
+                <label>Case Title</label>
+                <input 
+                  type="text" 
+                  value={newCaseTitle}
+                  onChange={(e) => setNewCaseTitle(e.target.value)}
+                  placeholder="e.g. Downtown Assault"
+                  className="login-input"
+                  required
+                />
+              </div>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Session</button>
+                <button type="submit" className="btn-primary" disabled={isCreating}>
+                  {isCreating ? <Loader2 size={16} className="spinner" /> : "Create Session"}
+                </button>
               </div>
             </form>
           </div>

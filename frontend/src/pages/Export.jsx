@@ -1,19 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, FileText, Search, ChevronDown, ChevronRight, ShieldCheck } from 'lucide-react';
 import './Export.css';
+
+const API_BASE = 'http://127.0.0.1:8000';
 
 const Export = () => {
   const { id } = useParams();
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [sessionData, setSessionData] = useState(null);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/sessions/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSessionData(data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchSession();
+  }, [id]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/export`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          session_id: id,
+          include_audit: true
+        })
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `FaceForge_Report_${sessionData?.case_number || id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+          alert('Export failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error during export');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="export-page">
       <div className="export-header">
         <div className="header-left">
           <h1 className="page-title">Forensic Report</h1>
-          <span className="case-badge mono">{id}</span>
+          <span className="case-badge mono">{sessionData?.case_number || id}</span>
         </div>
         <div className="export-actions">
           <button className="btn-secondary" onClick={() => setShowMatches(true)}>
@@ -22,8 +80,8 @@ const Export = () => {
           <button className="btn-success">
             <Download size={16} /> Download HD PNG
           </button>
-          <button className="btn-primary">
-            <FileText size={16} /> Download PDF
+          <button className="btn-primary" onClick={handleExport} disabled={isExporting}>
+            <FileText size={16} /> {isExporting ? 'Generating...' : 'Download PDF'}
           </button>
         </div>
       </div>
