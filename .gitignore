@@ -15,6 +15,14 @@ dist-ssr
 .env.*
 !.env.example
 
+# Temporary test/response artefacts — may contain auth tokens
+temp.json
+
+# Backend secret files
+FaceForge_Backend/.env
+FaceForge_Backend/.env.*
+!FaceForge_Backend/.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
